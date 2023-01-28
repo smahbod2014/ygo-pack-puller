@@ -1,6 +1,11 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"os"
+	"smahbod2014/ygo-pack-puller/ui"
+
+	"github.com/gin-gonic/gin"
+)
 
 func Start() {
 	router := gin.Default()
@@ -8,5 +13,12 @@ func Start() {
 	group.POST("/pull", func(ctx *gin.Context) {
 		performPulls(ctx)
 	})
-	router.Run(":4000")
+
+	ui.AddRoutes(router)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "4000"
+	}
+	router.Run(":" + port)
 }
