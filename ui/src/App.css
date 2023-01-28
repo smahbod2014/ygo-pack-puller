@@ -191,6 +191,7 @@
   z-index: 2;
   animation: shine 2s;
   animation-iteration-count: infinite;
+  animation-delay: -1s;
 }
 
 @keyframes shine {

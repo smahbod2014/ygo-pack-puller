@@ -27,16 +27,6 @@ type SecretPackCard struct {
 	CardVariations []SecretPackCardVariation `json:"card_variations"`
 }
 
-type MasterPackCard struct {
-	Name   string `json:"name"`
-	Pack   string `json:"pack"`
-	Rarity Rarity `json:"rarity"`
-}
-
-type MasterPackQuery struct {
-	Data []MasterPackCard `json:"data"`
-}
-
 type PulledCard struct {
 	Rarity Rarity
 	Foil   Foil

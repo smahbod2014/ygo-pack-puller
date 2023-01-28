@@ -4,14 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/thoas/go-funk"
-	"golang.org/x/exp/maps"
 )
 
 type PerformPullsRequest struct {
@@ -61,41 +58,39 @@ func performPulls(ctx *gin.Context) {
 	}
 
 	alsoPullFromMasterPack := true
-	if len(secretPackCardMap[RarityUltraRare]) >= 13 {
+	if isSelectionPack(requestBody.PackName) || requestBody.PackName == "Master Pack" {
 		alsoPullFromMasterPack = false
 	}
 
-	// Get the master pack cards
-	masterPackCardsResponse, err := http.Get("https://db.ygoprodeck.com/queries/master_duel/getMasterDuel.php")
-	if err != nil {
-		ctx.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	masterPackCardsBytes, err := io.ReadAll(masterPackCardsResponse.Body)
-	if err != nil {
-		ctx.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	var masterPackCards MasterPackQuery
-	err = json.Unmarshal(masterPackCardsBytes, &masterPackCards)
-	if err != nil {
-		ctx.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	masterPackCardMap := make(map[Rarity][]MasterPackCard)
-	for _, card := range masterPackCards.Data {
-		if card.Pack == "Legacy Pack" {
-			continue
+	var masterPackCards []SecretPackCard
+	if alsoPullFromMasterPack {
+		// Get the master pack cards
+		masterPackCardsResponse, err := http.Get(fmt.Sprintf("https://ygoprodeck.com/api/pack/setSearch.php?cardset=%s&region=MD", url.QueryEscape("Master Pack")))
+		if err != nil {
+			ctx.AbortWithError(http.StatusInternalServerError, err)
+			return
 		}
-		masterPackCardMap[card.Rarity] = append(masterPackCardMap[card.Rarity], card)
+
+		masterPackCardsBytes, err := io.ReadAll(masterPackCardsResponse.Body)
+		if err != nil {
+			ctx.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+
+		err = json.Unmarshal(masterPackCardsBytes, &masterPackCards)
+		if err != nil {
+			ctx.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+	}
+
+	masterPackCardMap := make(map[Rarity][]SecretPackCard)
+	for _, card := range masterPackCards {
+		masterPackCardMap[card.CardVariations[0].CardRarity] = append(masterPackCardMap[card.CardVariations[0].CardRarity], card)
 	}
 
 	pulls := getPullRarities(requestBody.NumPacks)
 
-	masterPackCardNames := map[string]bool{}
 	result := make([][]ResultCard, len(pulls))
 	numURs := 0
 	for i := 0; i < len(pulls); i++ {
@@ -106,54 +101,23 @@ func performPulls(ctx *gin.Context) {
 				numURs++
 			}
 
+			var selectedCard SecretPackCard
 			if j < 4 && alsoPullFromMasterPack {
 				// Pull from the master pack
 				cardIndex := rand.Intn(len(masterPackCardMap[pulledCard.Rarity]))
-				masterPackCard := masterPackCardMap[pulledCard.Rarity][cardIndex]
-				masterPackCardNames[masterPackCard.Name] = true
-				result[i][j] = ResultCard{
-					CardName:   masterPackCard.Name,
-					CardRarity: pulledCard.Rarity,
-					CardFoil:   pulledCard.Foil,
-				}
+				selectedCard = masterPackCardMap[pulledCard.Rarity][cardIndex]
 			} else {
 				// Pull from the secret pack
 				cardIndex := rand.Intn(len(secretPackCardMap[pulledCard.Rarity]))
-				secretPackCard := secretPackCardMap[pulledCard.Rarity][cardIndex]
-				result[i][j] = ResultCard{
-					CardName:   secretPackCard.CardName,
-					CardID:     secretPackCard.CardID,
-					CardImg:    secretPackCard.CardImg,
-					CardRarity: pulledCard.Rarity,
-					CardFoil:   pulledCard.Foil,
-				}
+				selectedCard = secretPackCardMap[pulledCard.Rarity][cardIndex]
 			}
-		}
-	}
 
-	cardInfo, err := GetCardInfo(maps.Keys(masterPackCardNames))
-	if err != nil {
-		log.Println("Failed to get card info", err)
-		ctx.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	if len(cardInfo.Data) != len(masterPackCardNames) {
-		log.Println("Mismatched card info. Master pack card names", masterPackCardNames)
-		log.Println("Queried card data", cardInfo.Data)
-		ctx.AbortWithError(http.StatusInternalServerError, fmt.Errorf("CardInfoData length mismatch, expected %d, got %d", len(masterPackCardNames), len(cardInfo.Data)))
-		return
-	}
-
-	cardInfoByName := funk.Map(cardInfo.Data, func(cardInfoData CardInfoData) (string, CardInfoData) {
-		return cardInfoData.Name, cardInfoData
-	}).(map[string]CardInfoData)
-
-	for i, packCards := range result {
-		for j, card := range packCards {
-			if card.CardID == 0 {
-				result[i][j].CardID = cardInfoByName[card.CardName].ID
-				result[i][j].CardImg = cardInfoByName[card.CardName].CardImages[0].ImageURL
+			result[i][j] = ResultCard{
+				CardName:   selectedCard.CardName,
+				CardID:     selectedCard.CardID,
+				CardImg:    selectedCard.CardImg,
+				CardRarity: pulledCard.Rarity,
+				CardFoil:   pulledCard.Foil,
 			}
 		}
 	}
@@ -255,12 +219,47 @@ func addCardIfNotExists(cardName string, rarity Rarity, cards []SecretPackCard) 
 	return cards
 }
 
+func removeCardIfExists(cardName string, cards []SecretPackCard) []SecretPackCard {
+	var fixedCards []SecretPackCard
+	for _, card := range cards {
+		if card.CardName != cardName {
+			fixedCards = append(fixedCards, card)
+		}
+	}
+	return fixedCards
+}
+
 func fixPack(packName string, secretPackCards []SecretPackCard) []SecretPackCard {
 	if packName == "Singular Strike Overthrow" {
 		secretPackCards = addCardIfNotExists("Surgical Striker - H.A.M.P.", RarityUltraRare, secretPackCards)
 		secretPackCards = addCardIfNotExists("Mathmech Circular", RarityUltraRare, secretPackCards)
 		secretPackCards = addCardIfNotExists("Sky Striker Mobilize - Linkage!", RarityUltraRare, secretPackCards)
 		secretPackCards = addCardIfNotExists("Aileron", RaritySuperRare, secretPackCards)
+	} else if packName == "Blazing Fortitude" {
+		secretPackCards = removeCardIfExists("Stall Turn", secretPackCards)
+	}
+
+	if packName != "Rulers of the Deep" && packName != "Master Pack" {
+		secretPackCards = removeCardIfExists("Fury of Kairyu-Shin", secretPackCards)
 	}
 	return secretPackCards
+}
+
+func isSelectionPack(packName string) bool {
+	return packName == "Revival of Legends" ||
+		packName == "Stalwart Force" ||
+		packName == "Ruler's Mask" ||
+		packName == "Fusion Potential" ||
+		packName == "Refined Blade" ||
+		packName == "Valiant Wings" ||
+		packName == "Wandering Travelers" ||
+		packName == "Invincible Raid" ||
+		packName == "The Newborn Dragon" ||
+		packName == "Cosmic Ocean" ||
+		packName == "Battle Trajectory" ||
+		packName == "Mysterious Labyrinth" ||
+		packName == "Beginning of Turmoil" ||
+		packName == "Heroic Warriors" ||
+		packName == "Recollection of Stories" ||
+		packName == "Beyond Speed"
 }

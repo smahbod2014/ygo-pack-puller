@@ -154,6 +154,23 @@ export const secretPacks = [
   "World Cloaked in Magical Power",
   "Worthy Adversaries",
   "Yearning Evil Body",
+  "Revival of Legends",
+  "Stalwart Force",
+  "Beyond Speed",
+  "Ruler's Mask",
+  "Fusion Potential",
+  "Refined Blade",
+  "Valiant Wings",
+  "Wandering Travelers",
+  "Invincible Raid",
+  "The Newborn Dragon",
+  "Cosmic Ocean",
+  "Battle Trajectory",
+  "Mysterious Labyrinth",
+  "Beginning of Turmoil",
+  "Heroic Warriors",
+  "Recollection of Stories",
+  "Master Pack",
 ];
 
 export const rarityURImage =

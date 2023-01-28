@@ -182,12 +182,16 @@ function App() {
           </div>
         </div>
 
+        {nextPackLoading && !performPullsResponse && <p className="Loading">Loading...</p>}
+
         {performPullsResponse && performPullsResponse.pulls.length > 0 && (
           <>
             <p>
               Pack {currentPackNumber + 1} of {numPacksInCurrentPull}
             </p>
-            {!nextPackLoading ? (
+            {nextPackLoading ? (
+              <p className="Loading">Loading...</p>
+            ) : (
               <div className="PullsContainer">
                 {performPullsResponse.pulls[currentPackNumber].map((card, i) => (
                   <div
@@ -214,8 +218,6 @@ function App() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="Loading">Loading...</p>
             )}
 
             <div className="PackPullButtonContainer">
