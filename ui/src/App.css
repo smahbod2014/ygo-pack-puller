@@ -1,0 +1,126 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.PackSelector {
+  color: black;
+  font-size: smaller;
+  width: 500px;
+}
+
+.PackPullButton {
+  margin-left: auto;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  max-width: 200px;
+  width: 150px;
+}
+
+.PullsContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 85%;
+  height: 400px;
+  margin-bottom: 30px;
+}
+
+.CardImage {
+  max-width: 100%;
+}
+
+.CardRarity {
+  width: 50%;
+}
+
+.Hidden {
+  visibility: hidden;
+}
+
+.PackSelectorContainer {
+  display: flex;
+  flex-direction: column;
+  width: 30%;
+}
+
+.PackSelectorRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.PackSelectorNumberPicker {
+  max-width: 200px;
+}
+
+.Loading {
+  margin: auto;
+}
+
+/* The flip card container - set the width and height to whatever you want. We have added the border property to demonstrate that the flip itself goes out of the box on hover (remove perspective if you don't want the 3D effect */
+.flip-card {
+  background-color: transparent;
+  cursor: pointer;
+  user-select: none;
+  width: 250px;
+  height: 350px;
+  perspective: 3000px; /* Remove this if you don't want the 3D effect */
+}
+
+/* This container is needed to position the front and back side */
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.2s;
+  transform-style: preserve-3d;
+}
+
+/* Do an horizontal flip when you move the mouse over the flip box container */
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* Position the front and back side */
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden; /* Safari */
+  backface-visibility: hidden;
+}
+
+/* Style the front side (fallback if image is missing) */
+.flip-card-front {
+  background-color: transparent;
+  color: black;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 2px;
+}
+
+/* Style the back side */
+.flip-card-back {
+  background-color: transparent;
+  color: white;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 2px;
+}
