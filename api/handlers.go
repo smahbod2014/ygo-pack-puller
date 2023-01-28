@@ -3,10 +3,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/thoas/go-funk"
@@ -15,6 +16,7 @@ import (
 
 type PerformPullsRequest struct {
 	PackName string `json:"pack_name"`
+	NumPacks int    `json:"num_packs"`
 }
 
 type PerformPullsResponse struct {
@@ -32,13 +34,13 @@ func performPulls(ctx *gin.Context) {
 	}
 
 	// Get the cards from the pack
-	secretPackCardsResponse, err := http.Get(fmt.Sprintf("https://ygoprodeck.com/api/pack/setSearch.php?cardset=%s&region=MD", requestBody.PackName))
+	secretPackCardsResponse, err := http.Get(fmt.Sprintf("https://ygoprodeck.com/api/pack/setSearch.php?cardset=%s&region=MD", url.QueryEscape(requestBody.PackName)))
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
-	secretPackCardsBytes, err := ioutil.ReadAll(secretPackCardsResponse.Body)
+	secretPackCardsBytes, err := io.ReadAll(secretPackCardsResponse.Body)
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
@@ -70,7 +72,7 @@ func performPulls(ctx *gin.Context) {
 		return
 	}
 
-	masterPackCardsBytes, err := ioutil.ReadAll(masterPackCardsResponse.Body)
+	masterPackCardsBytes, err := io.ReadAll(masterPackCardsResponse.Body)
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
@@ -91,7 +93,7 @@ func performPulls(ctx *gin.Context) {
 		masterPackCardMap[card.Rarity] = append(masterPackCardMap[card.Rarity], card)
 	}
 
-	pulls := getPullRarities()
+	pulls := getPullRarities(requestBody.NumPacks)
 
 	masterPackCardNames := map[string]bool{}
 	result := make([][]ResultCard, len(pulls))
@@ -163,7 +165,7 @@ func performPulls(ctx *gin.Context) {
 	})
 }
 
-func getPullRarities() [][]PulledCard {
+func getPullRarities(numPacks int) [][]PulledCard {
 	rChanceA := 35.0
 	srChanceA := 7.5
 	urChanceA := 2.5
@@ -173,9 +175,9 @@ func getPullRarities() [][]PulledCard {
 
 	urChanceC := 20.0
 
-	pulls := make([][]PulledCard, 10)
+	pulls := make([][]PulledCard, numPacks)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < numPacks; i++ {
 		pulls[i] = make([]PulledCard, 8)
 		for j := 0; j < 8; j++ {
 			var card PulledCard
@@ -191,7 +193,7 @@ func getPullRarities() [][]PulledCard {
 					card = getFoil(RarityCommon)
 				}
 			} else {
-				if i < 9 {
+				if i%10 < 9 {
 					if roll < urChanceB {
 						card = getFoil(RarityUltraRare)
 					} else if roll < urChanceB+srChanceB {

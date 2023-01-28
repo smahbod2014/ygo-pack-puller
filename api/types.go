@@ -13,7 +13,7 @@ const (
 const (
 	FoilNone   Foil = "normal"
 	FoilGlossy Foil = "glossy"
-	FoilRoyal  Foil = "ROYAL"
+	FoilRoyal  Foil = "royal"
 )
 
 type SecretPackCardVariation struct {

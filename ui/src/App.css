@@ -8,7 +8,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
 }
@@ -19,12 +18,18 @@
   width: 500px;
 }
 
-.PackPullButton {
-  margin-left: auto;
+.PackPullButtonContainer {
   margin-top: 20px;
-  margin-bottom: 20px;
-  max-width: 200px;
-  width: 150px;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  width: 85%;
+}
+
+.PackPullButton {
+  margin-left: 20px;
+  min-width: 150px;
+  min-height: 50px;
 }
 
 .PullsContainer {
@@ -42,14 +47,21 @@
 }
 
 .CardRarity {
-  width: 50%;
+  width: 40%;
 }
 
 .Hidden {
   visibility: hidden;
 }
 
+.StartPullingPacksButton {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  width: 150px;
+}
+
 .PackSelectorContainer {
+  margin-top: 150px;
   display: flex;
   flex-direction: column;
   width: 30%;
@@ -66,7 +78,43 @@
 }
 
 .Loading {
-  margin: auto;
+  width: 85%;
+  height: 400px;
+  margin-bottom: 30px;
+}
+
+.SummaryButtonContainer {
+  margin-top: 50px;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  width: 80%;
+}
+
+.SummaryButton {
+  margin-left: 20px;
+}
+
+.SummaryContainer {
+  margin-top: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 80%;
+}
+
+.SummaryRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.SummaryCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 6px;
 }
 
 /* The flip card container - set the width and height to whatever you want. We have added the border property to demonstrate that the flip itself goes out of the box on hover (remove perspective if you don't want the 3D effect */
@@ -75,7 +123,7 @@
   cursor: pointer;
   user-select: none;
   width: 250px;
-  height: 350px;
+  height: 380px;
   perspective: 3000px; /* Remove this if you don't want the 3D effect */
 }
 
@@ -123,4 +171,31 @@
   flex-direction: column;
   align-items: flex-end;
   padding: 2px;
+}
+
+.glossy {
+  position: relative;
+  overflow: hidden;
+}
+
+.glossy::before {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 100%);
+  content: "";
+  display: block;
+  height: 100%;
+  left: -100%;
+  position: absolute;
+  top: 0;
+  transform: skewX(-25deg);
+  width: 50%;
+  z-index: 2;
+  animation: shine 2s;
+  animation-iteration-count: infinite;
+}
+
+@keyframes shine {
+  42%,
+  100% {
+    left: 125%;
+  }
 }
