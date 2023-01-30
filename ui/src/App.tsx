@@ -170,7 +170,7 @@ function App() {
               className="PackSelectorNumberPicker"
               defaultValue={numPacksInCurrentPull}
               min={1}
-              max={30}
+              max={100}
               onChange={(value) => setNumPacksToPull(value ?? 10)}
             />
           </div>
