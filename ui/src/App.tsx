@@ -40,6 +40,13 @@ function getCardRarityAsNumber(card: ResultCard) {
   }
 }
 
+function fixPackName(packName: string) {
+  if (packName === "Natural Selection") {
+    return packName + " (Set)";
+  }
+  return packName;
+}
+
 function compareByRarity(a: ResultCard, b: ResultCard): number {
   return getCardRarityAsNumber(a) - getCardRarityAsNumber(b);
 }
@@ -61,7 +68,7 @@ function App() {
     const jsonResponse: PerformPullsResponse = await fetch("/api/pull", {
       method: "POST",
       body: JSON.stringify({
-        pack_name: selectedPack,
+        pack_name: fixPackName(selectedPack),
         num_packs: numPacksToPull,
       }),
       headers: { "Content-Type": "application/json" },
