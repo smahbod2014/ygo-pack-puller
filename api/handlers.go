@@ -261,5 +261,7 @@ func isSelectionPack(packName string) bool {
 		packName == "Beginning of Turmoil" ||
 		packName == "Heroic Warriors" ||
 		packName == "Recollection of Stories" ||
+		packName == "Sprites of Miracle" ||
+		packName == "New Step for Duelists" ||
 		packName == "Beyond Speed"
 }

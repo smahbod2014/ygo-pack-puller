@@ -170,6 +170,8 @@ export const secretPacks = [
   "Beginning of Turmoil",
   "Heroic Warriors",
   "Recollection of Stories",
+  "Sprites of Miracle",
+  "New Step for Duelists",
   "Master Pack",
 ];
 
