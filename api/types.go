@@ -4,10 +4,10 @@ type Rarity string
 type Foil string
 
 const (
-	RarityUltraRare Rarity = "Ultra Rare"
-	RaritySuperRare Rarity = "Super Rare"
-	RarityRare      Rarity = "Rare"
-	RarityCommon    Rarity = "Common"
+	RarityUltraRare Rarity = "UR"
+	RaritySuperRare Rarity = "SR"
+	RarityRare      Rarity = "R"
+	RarityCommon    Rarity = "N"
 )
 
 const (
@@ -16,26 +16,36 @@ const (
 	FoilRoyal  Foil = "royal"
 )
 
-type SecretPackCardVariation struct {
-	CardRarity Rarity `json:"card_rarity"`
-}
-
-type SecretPackCard struct {
-	CardID         int                       `json:"card_id"`
-	CardName       string                    `json:"card_name"`
-	CardImg        string                    `json:"card_img"`
-	CardVariations []SecretPackCardVariation `json:"card_variations"`
-}
-
 type PulledCard struct {
 	Rarity Rarity
 	Foil   Foil
 }
 
 type ResultCard struct {
-	CardID     int    `json:"card_id"`
+	CardID     string `json:"card_id"`
 	CardName   string `json:"card_name"`
 	CardImg    string `json:"card_img"`
 	CardRarity Rarity `json:"card_rarity"`
 	CardFoil   Foil   `json:"card_foil"`
+}
+
+type MDMPackType string
+
+const (
+	MDMPackTypeSecretPack    MDMPackType = "Secret Pack"
+	MDMPackTypeSelectionPack MDMPackType = "Selection Pack"
+	MDMPackTypeMasterPack    MDMPackType = "Normal Pack"
+)
+
+type MDMPack struct {
+	ID   string      `json:"_id"`
+	Type MDMPackType `json:"type"`
+	Name string      `json:"name"`
+}
+
+type MDMCard struct {
+	ID       string `json:"_id"`
+	KonamiID string `json:"konamiID"`
+	Name     string `json:"name"`
+	Rarity   Rarity `json:"rarity"`
 }

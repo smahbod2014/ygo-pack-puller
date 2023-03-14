@@ -1,11 +1,11 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import logo from "./logo.svg";
 import "./App.css";
 import "react-widgets/styles.css";
 import Select from "react-select";
 import { Button } from "react-bootstrap";
 import { json } from "stream/consumers";
-import { cardBackImage, rarityImages, rarityURImage, secretPacks } from "./Data";
+import { cardBackImage, rarityImages, rarityURImage } from "./Data";
 import classNames from "classnames";
 import NumberPicker from "react-widgets/NumberPicker";
 import Tooltip from "@mui/material/Tooltip";
@@ -27,24 +27,17 @@ interface ResultCard {
 
 function getCardRarityAsNumber(card: ResultCard) {
   switch (card.card_rarity) {
-    case "Common":
+    case "N":
       return 0;
-    case "Rare":
+    case "R":
       return 1;
-    case "Super Rare":
+    case "SR":
       return 2;
-    case "Ultra Rare":
+    case "UR":
       return 3;
     default:
       return 4;
   }
-}
-
-function fixPackName(packName: string) {
-  if (packName === "Natural Selection") {
-    return packName + " (Set)";
-  }
-  return packName;
 }
 
 function compareByRarity(a: ResultCard, b: ResultCard): number {
@@ -52,8 +45,8 @@ function compareByRarity(a: ResultCard, b: ResultCard): number {
 }
 
 function App() {
-  const packOptions = secretPacks.sort().map((e) => ({ label: e, value: e }));
-  const [selectedPack, setSelectedPack] = useState<string>(packOptions[0].value);
+  const [packOptions, setPackOptions] = useState<string[]>([]);
+  const [selectedPack, setSelectedPack] = useState<string>();
   const [performPullsResponse, setPerformPullsResponse] = useState<PerformPullsResponse | undefined>(undefined);
   const [currentPackNumber, setCurrentPackNumber] = useState(0);
   const [revealedCards, setRevealedCards] = useState(new Array<boolean>(8));
@@ -62,13 +55,27 @@ function App() {
   const [nextPackLoading, setNextPackLoading] = useState(false);
   const [showingSummary, setShowingSummary] = useState(false);
 
+  useEffect(() => {
+    fetch("/api/packs")
+      .then(result => result.json())
+      .then(json => {
+        const packs: string[] = []
+        for (const pack of json) {
+          packs.push(pack.name)
+        }
+        packs.sort();
+        setPackOptions(packs);
+        setSelectedPack(packs[0]);
+      })
+  }, [])
+
   const postPullPacks = async () => {
     setNextPackLoading(true);
 
     const jsonResponse: PerformPullsResponse = await fetch("/api/pull", {
       method: "POST",
       body: JSON.stringify({
-        pack_name: fixPackName(selectedPack),
+        pack_name: selectedPack,
         num_packs: numPacksToPull,
       }),
       headers: { "Content-Type": "application/json" },
@@ -123,6 +130,13 @@ function App() {
             <Button
               className="SummaryButton"
               variant="success"
+              onClick={postPullPacks}
+            >
+              Again
+            </Button>
+            <Button
+              className="SummaryButton"
+              variant="success"
               onClick={() => {
                 setShowingSummary(false);
                 setPerformPullsResponse(undefined);
@@ -164,12 +178,14 @@ function App() {
         <div className="PackSelectorContainer">
           <div className="PackSelectorRow">
             <p>Choose a pack</p>
-            <Select
-              className="PackSelector"
-              options={packOptions}
-              defaultValue={{ label: selectedPack, value: selectedPack }}
-              onChange={(e) => setSelectedPack(e!.value)}
-            />
+            {selectedPack && (
+              <Select
+                className="PackSelector"
+                options={packOptions.map(pack => ({ label: pack, value: pack }))}
+                defaultValue={{ label: selectedPack, value: selectedPack }}
+                onChange={(e) => setSelectedPack(e!.value)}
+              />
+            )}
           </div>
           <div className="PackSelectorRow">
             <p>Number of packs</p>

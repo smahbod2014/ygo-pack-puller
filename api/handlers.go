@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jucardi/go-streams/v2/streams"
 )
 
 type PerformPullsRequest struct {
@@ -22,7 +23,7 @@ type PerformPullsResponse struct {
 	Pulls    [][]ResultCard `json:"pulls"`
 }
 
-func performPulls(ctx *gin.Context) {
+func PerformPullsHandler(ctx *gin.Context) {
 	requestBody := PerformPullsRequest{}
 	err := ctx.BindJSON(&requestBody)
 	if err != nil {
@@ -30,63 +31,63 @@ func performPulls(ctx *gin.Context) {
 		return
 	}
 
-	// Get the cards from the pack
-	secretPackCardsResponse, err := http.Get(fmt.Sprintf("https://ygoprodeck.com/api/pack/setSearch.php?cardset=%s&region=MD", url.QueryEscape(requestBody.PackName)))
+	packs, err := getPacks()
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
-	secretPackCardsBytes, err := io.ReadAll(secretPackCardsResponse.Body)
+	pack := streams.
+		From[MDMPack](packs).
+		Filter(func(pack MDMPack) bool {
+			return pack.Name == requestBody.PackName
+		}).
+		First()
+
+	if pack.ID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "Pack not found",
+		})
+		return
+	}
+
+	cards, err := fetchAllCardsFromPack(pack.ID)
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
-	var secretPackCards []SecretPackCard
-	err = json.Unmarshal(secretPackCardsBytes, &secretPackCards)
-	if err != nil {
-		ctx.AbortWithError(http.StatusInternalServerError, err)
-		return
+	cardMapByRarity := map[Rarity][]MDMCard{}
+	for _, card := range cards {
+		cardMapByRarity[card.Rarity] = append(cardMapByRarity[card.Rarity], card)
 	}
 
-	secretPackCards = fixPack(requestBody.PackName, secretPackCards)
+	alsoPullFromMasterPack := pack.Type == MDMPackTypeSecretPack
 
-	secretPackCardMap := make(map[Rarity][]SecretPackCard)
-	for _, card := range secretPackCards {
-		secretPackCardMap[card.CardVariations[0].CardRarity] = append(secretPackCardMap[card.CardVariations[0].CardRarity], card)
-	}
-
-	alsoPullFromMasterPack := true
-	if isSelectionPack(requestBody.PackName) || requestBody.PackName == "Master Pack" {
-		alsoPullFromMasterPack = false
-	}
-
-	var masterPackCards []SecretPackCard
+	masterPackCardMapByRarity := map[Rarity][]MDMCard{}
 	if alsoPullFromMasterPack {
-		// Get the master pack cards
-		masterPackCardsResponse, err := http.Get(fmt.Sprintf("https://ygoprodeck.com/api/pack/setSearch.php?cardset=%s&region=MD", url.QueryEscape("Master Pack")))
+		masterPack := streams.
+			From[MDMPack](packs).
+			Filter(func(pack MDMPack) bool {
+				return pack.Type == MDMPackTypeMasterPack
+			}).
+			First()
+
+		if masterPack.ID == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Master Pack not found",
+			})
+			return
+		}
+		masterPackCards, err := fetchAllCardsFromPack(masterPack.ID)
 		if err != nil {
 			ctx.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
-		masterPackCardsBytes, err := io.ReadAll(masterPackCardsResponse.Body)
-		if err != nil {
-			ctx.AbortWithError(http.StatusInternalServerError, err)
-			return
+		for _, card := range masterPackCards {
+			masterPackCardMapByRarity[card.Rarity] = append(masterPackCardMapByRarity[card.Rarity], card)
 		}
-
-		err = json.Unmarshal(masterPackCardsBytes, &masterPackCards)
-		if err != nil {
-			ctx.AbortWithError(http.StatusInternalServerError, err)
-			return
-		}
-	}
-
-	masterPackCardMap := make(map[Rarity][]SecretPackCard)
-	for _, card := range masterPackCards {
-		masterPackCardMap[card.CardVariations[0].CardRarity] = append(masterPackCardMap[card.CardVariations[0].CardRarity], card)
 	}
 
 	pulls := getPullRarities(requestBody.NumPacks)
@@ -101,21 +102,21 @@ func performPulls(ctx *gin.Context) {
 				numURs++
 			}
 
-			var selectedCard SecretPackCard
+			var selectedCard MDMCard
 			if j < 4 && alsoPullFromMasterPack {
 				// Pull from the master pack
-				cardIndex := rand.Intn(len(masterPackCardMap[pulledCard.Rarity]))
-				selectedCard = masterPackCardMap[pulledCard.Rarity][cardIndex]
+				cardIndex := rand.Intn(len(masterPackCardMapByRarity[pulledCard.Rarity]))
+				selectedCard = masterPackCardMapByRarity[pulledCard.Rarity][cardIndex]
 			} else {
-				// Pull from the secret pack
-				cardIndex := rand.Intn(len(secretPackCardMap[pulledCard.Rarity]))
-				selectedCard = secretPackCardMap[pulledCard.Rarity][cardIndex]
+				// Pull from the chosen pack
+				cardIndex := rand.Intn(len(cardMapByRarity[pulledCard.Rarity]))
+				selectedCard = cardMapByRarity[pulledCard.Rarity][cardIndex]
 			}
 
 			result[i][j] = ResultCard{
-				CardName:   selectedCard.CardName,
-				CardID:     selectedCard.CardID,
-				CardImg:    selectedCard.CardImg,
+				CardName:   selectedCard.Name,
+				CardID:     selectedCard.KonamiID,
+				CardImg:    "https://s3.duellinksmeta.com/cards/" + selectedCard.ID + "_w420.webp",
 				CardRarity: pulledCard.Rarity,
 				CardFoil:   pulledCard.Foil,
 			}
@@ -202,66 +203,71 @@ func getFoil(rarity Rarity) PulledCard {
 	}
 }
 
-func addCardIfNotExists(cardName string, rarity Rarity, cards []SecretPackCard) []SecretPackCard {
-	for _, card := range cards {
-		if card.CardName == cardName {
-			return cards
+func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
+	var cards []MDMCard
+	apiURL := "https://www.masterduelmeta.com/api/v1/cards?obtain.source=%s&cardSort=monsterTypeOrder&aggregate=search&fields=name,rarity,konamiID&page=%d&limit=1000"
+	page := 1
+	for {
+		response, err := http.Get(fmt.Sprintf(apiURL, url.QueryEscape(packID), page))
+		if err != nil {
+			return nil, err
 		}
-	}
-	cards = append(cards, SecretPackCard{
-		CardName: cardName,
-		CardVariations: []SecretPackCardVariation{
-			{
-				CardRarity: rarity,
-			},
-		},
-	})
-	return cards
-}
 
-func removeCardIfExists(cardName string, cards []SecretPackCard) []SecretPackCard {
-	var fixedCards []SecretPackCard
-	for _, card := range cards {
-		if card.CardName != cardName {
-			fixedCards = append(fixedCards, card)
+		bytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
 		}
+
+		var readCards []MDMCard
+		err = json.Unmarshal(bytes, &readCards)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(readCards) == 0 {
+			break
+		}
+
+		cards = append(cards, readCards...)
+		page++
 	}
-	return fixedCards
+
+	return cards, nil
 }
 
-func fixPack(packName string, secretPackCards []SecretPackCard) []SecretPackCard {
-	if packName == "Singular Strike Overthrow" {
-		secretPackCards = addCardIfNotExists("Surgical Striker - H.A.M.P.", RarityUltraRare, secretPackCards)
-		secretPackCards = addCardIfNotExists("Mathmech Circular", RarityUltraRare, secretPackCards)
-		secretPackCards = addCardIfNotExists("Sky Striker Mobilize - Linkage!", RarityUltraRare, secretPackCards)
-		secretPackCards = addCardIfNotExists("Aileron", RaritySuperRare, secretPackCards)
-	} else if packName == "Blazing Fortitude" {
-		secretPackCards = removeCardIfExists("Stall Turn", secretPackCards)
+func getPacks() ([]MDMPack, error) {
+	setsResponse, err := http.Get("https://www.masterduelmeta.com/api/v1/sets?page=1&limit=500&fields=name,release,type")
+	if err != nil {
+		return nil, err
 	}
 
-	if packName != "Rulers of the Deep" && packName != "Master Pack" {
-		secretPackCards = removeCardIfExists("Fury of Kairyu-Shin", secretPackCards)
+	bytes, err := io.ReadAll(setsResponse.Body)
+	if err != nil {
+		return nil, err
 	}
-	return secretPackCards
+
+	var allPacks []MDMPack
+	err = json.Unmarshal(bytes, &allPacks)
+	if err != nil {
+		return nil, err
+	}
+
+	return streams.
+		From[MDMPack](allPacks).
+		Filter(func(pack MDMPack) bool {
+			return pack.Type == MDMPackTypeMasterPack ||
+				pack.Type == MDMPackTypeSecretPack ||
+				pack.Type == MDMPackTypeSelectionPack
+		}).
+		ToArray(), nil
 }
 
-func isSelectionPack(packName string) bool {
-	return packName == "Revival of Legends" ||
-		packName == "Stalwart Force" ||
-		packName == "Ruler's Mask" ||
-		packName == "Fusion Potential" ||
-		packName == "Refined Blade" ||
-		packName == "Valiant Wings" ||
-		packName == "Wandering Travelers" ||
-		packName == "Invincible Raid" ||
-		packName == "The Newborn Dragon" ||
-		packName == "Cosmic Ocean" ||
-		packName == "Battle Trajectory" ||
-		packName == "Mysterious Labyrinth" ||
-		packName == "Beginning of Turmoil" ||
-		packName == "Heroic Warriors" ||
-		packName == "Recollection of Stories" ||
-		packName == "Sprites of Miracle" ||
-		packName == "New Step for Duelists" ||
-		packName == "Beyond Speed"
+func GetPacksHandler(ctx *gin.Context) {
+	packs, err := getPacks()
+	if err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, packs)
 }
