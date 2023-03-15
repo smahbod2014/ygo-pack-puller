@@ -57,8 +57,13 @@ func PerformPullsHandler(ctx *gin.Context) {
 		return
 	}
 
+	seenCards := map[string]bool{}
 	cardMapByRarity := map[Rarity][]MDMCard{}
 	for _, card := range cards {
+		if seenCards[card.Name] {
+			continue
+		}
+		seenCards[card.Name] = true
 		cardMapByRarity[card.Rarity] = append(cardMapByRarity[card.Rarity], card)
 	}
 
@@ -85,7 +90,14 @@ func PerformPullsHandler(ctx *gin.Context) {
 			return
 		}
 
+		for k := range seenCards {
+			delete(seenCards, k)
+		}
 		for _, card := range masterPackCards {
+			if seenCards[card.Name] {
+				continue
+			}
+			seenCards[card.Name] = true
 			masterPackCardMapByRarity[card.Rarity] = append(masterPackCardMapByRarity[card.Rarity], card)
 		}
 	}
