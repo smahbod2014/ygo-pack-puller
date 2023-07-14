@@ -1,5 +1,10 @@
 package api
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
 type Rarity string
 type Foil string
 
@@ -44,8 +49,26 @@ type MDMPack struct {
 }
 
 type MDMCard struct {
-	ID       string `json:"_id"`
-	KonamiID string `json:"konamiID"`
-	Name     string `json:"name"`
-	Rarity   Rarity `json:"rarity"`
+	ID       string  `json:"_id"`
+	KonamiID FlexInt `json:"konamiID"`
+	Name     string  `json:"name"`
+	Rarity   Rarity  `json:"rarity"`
+}
+
+type FlexInt int
+
+func (flexInt *FlexInt) UnmarshalJSON(b []byte) error {
+	if b[0] != '"' {
+		return json.Unmarshal(b, (*int)(flexInt))
+	}
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	*flexInt = FlexInt(i)
+	return nil
 }

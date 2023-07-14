@@ -7,9 +7,11 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jucardi/go-streams/v2/streams"
+	"github.com/pkg/errors"
 )
 
 type PerformPullsRequest struct {
@@ -127,7 +129,7 @@ func PerformPullsHandler(ctx *gin.Context) {
 
 			result[i][j] = ResultCard{
 				CardName:   selectedCard.Name,
-				CardID:     selectedCard.KonamiID,
+				CardID:     strconv.Itoa(int(selectedCard.KonamiID)),
 				CardImg:    "https://s3.duellinksmeta.com/cards/" + selectedCard.ID + "_w420.webp",
 				CardRarity: pulledCard.Rarity,
 				CardFoil:   pulledCard.Foil,
@@ -222,18 +224,18 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 	for {
 		response, err := http.Get(fmt.Sprintf(apiURL, url.QueryEscape(packID), page))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to fetch cards from cards API")
 		}
 
 		bytes, err := io.ReadAll(response.Body)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to read response body from cards API")
 		}
 
 		var readCards []MDMCard
 		err = json.Unmarshal(bytes, &readCards)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to unmarshal cards")
 		}
 
 		if len(readCards) == 0 {
@@ -250,18 +252,18 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 func getPacks() ([]MDMPack, error) {
 	setsResponse, err := http.Get("https://www.masterduelmeta.com/api/v1/sets?page=1&limit=500&fields=name,release,type")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get master duel sets")
 	}
 
 	bytes, err := io.ReadAll(setsResponse.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to read master duel sets response body")
 	}
 
 	var allPacks []MDMPack
 	err = json.Unmarshal(bytes, &allPacks)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal master duel sets bytes")
 	}
 
 	return streams.
