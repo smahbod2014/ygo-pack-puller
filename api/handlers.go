@@ -242,7 +242,33 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 			break
 		}
 
-		cards = append(cards, readCards...)
+		var fixedReadCards []MDMCard
+		for _, card := range readCards {
+			if card.KonamiID == 0 {
+				// Get the konami ID from ygoprodeck since masterduelmeta doesn't have it
+				ygoprodeckResponse, err := http.Get("https://db.ygoprodeck.com/api/v7/cardinfo.php?name=" + card.Name)
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to get fixed card from ygoprodeck")
+				}
+
+				// get ID from the first array element in the json response body
+				ygoprodeckBytes, err := io.ReadAll(ygoprodeckResponse.Body)
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to read response body from ygoprodeck")
+				}
+
+				var unmarshalledResponse YGOProDeckResponse
+				err = json.Unmarshal(ygoprodeckBytes, &unmarshalledResponse)
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to unmarshal ygoprodeck response")
+				}
+
+				card.KonamiID = FlexInt(unmarshalledResponse.Data[0].ID)
+			}
+			fixedReadCards = append(fixedReadCards, card)
+		}
+
+		cards = append(cards, fixedReadCards...)
 		page++
 	}
 

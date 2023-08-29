@@ -65,10 +65,21 @@ func (flexInt *FlexInt) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
+	if s == "" {
+		s = "0"
+	}
 	i, err := strconv.Atoi(s)
 	if err != nil {
 		return err
 	}
 	*flexInt = FlexInt(i)
 	return nil
+}
+
+type YGOProDeckResponse struct {
+	Data []YGOProDeckCard `json:"data"`
+}
+
+type YGOProDeckCard struct {
+	ID int `json:"id"`
 }
