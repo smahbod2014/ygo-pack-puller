@@ -1,14 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
-import logo from "./logo.svg";
+import { useEffect, useState } from "react";
 import "./App.css";
 import "react-widgets/styles.css";
 import Select from "react-select";
 import { Button } from "react-bootstrap";
-import { json } from "stream/consumers";
-import { cardBackImage, rarityImages, rarityURImage } from "./Data";
+import { cardBackImage, rarityImages } from "./Data";
 import classNames from "classnames";
 import NumberPicker from "react-widgets/NumberPicker";
-import Tooltip from "@mui/material/Tooltip";
 import Sparkle from "react-sparkle";
 
 interface PerformPullsResponse {
@@ -57,17 +54,17 @@ function App() {
 
   useEffect(() => {
     fetch("/api/packs")
-      .then(result => result.json())
-      .then(json => {
-        const packs: string[] = []
+      .then((result) => result.json())
+      .then((json) => {
+        const packs: string[] = [];
         for (const pack of json) {
-          packs.push(pack.name)
+          packs.push(pack.name);
         }
         packs.sort();
         setPackOptions(packs);
         setSelectedPack(packs[0]);
-      })
-  }, [])
+      });
+  }, []);
 
   const postPullPacks = async () => {
     setNextPackLoading(true);
@@ -127,11 +124,7 @@ function App() {
             <Button className="SummaryButton" variant="success" onClick={downloadBanlistFile}>
               Download as banlist
             </Button>
-            <Button
-              className="SummaryButton"
-              variant="success"
-              onClick={postPullPacks}
-            >
+            <Button className="SummaryButton" variant="success" onClick={postPullPacks}>
               Again
             </Button>
             <Button
@@ -181,7 +174,7 @@ function App() {
             {selectedPack && (
               <Select
                 className="PackSelector"
-                options={packOptions.map(pack => ({ label: pack, value: pack }))}
+                options={packOptions.map((pack) => ({ label: pack, value: pack }))}
                 defaultValue={{ label: selectedPack, value: selectedPack }}
                 onChange={(e) => setSelectedPack(e!.value)}
               />
@@ -193,7 +186,7 @@ function App() {
               className="PackSelectorNumberPicker"
               defaultValue={numPacksInCurrentPull}
               min={1}
-              max={100}
+              max={300}
               onChange={(value) => setNumPacksToPull(value ?? 10)}
             />
           </div>
