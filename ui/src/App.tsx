@@ -51,6 +51,7 @@ function App() {
   const [numPacksInCurrentPull, setNumPacksInCurrentPull] = useState(10);
   const [nextPackLoading, setNextPackLoading] = useState(false);
   const [showingSummary, setShowingSummary] = useState(false);
+  const [gitCommitHash, setGitCommitHash] = useState("");
 
   useEffect(() => {
     fetch("/api/packs")
@@ -63,6 +64,13 @@ function App() {
         packs.sort();
         setPackOptions(packs);
         setSelectedPack(packs[0]);
+      });
+
+    fetch("/api/version")
+      .then((result) => result.json())
+      .then((json) => {
+        const hash = json.hash as string;
+        setGitCommitHash(hash.slice(0, 8));
       });
   }, []);
 
@@ -294,6 +302,7 @@ function App() {
             </div>
           </>
         )}
+        <div className="VersionText">{gitCommitHash}</div>
       </header>
     </div>
   );

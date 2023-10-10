@@ -20,11 +20,15 @@ func Start() {
 		GetPacksHandler(ctx)
 	})
 
+	group.GET("/version", func(ctx *gin.Context) {
+		GetGitCommitHashHandler(ctx)
+	})
+
 	ui.AddRoutes(router)
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "4001"
+		port = "4000"
 	}
 	router.Run(":" + port)
 }
