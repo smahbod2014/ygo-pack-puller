@@ -7,25 +7,13 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"runtime/debug"
 	"strconv"
 
+	"github.com/carlmjohnson/versioninfo"
 	"github.com/gin-gonic/gin"
 	"github.com/jucardi/go-streams/v2/streams"
 	"github.com/pkg/errors"
 )
-
-var gitCommitHash = func() string {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" {
-				return setting.Value
-			}
-		}
-	}
-
-	return ""
-}()
 
 type PerformPullsRequest struct {
 	PackName string `json:"pack_name"`
@@ -327,6 +315,7 @@ func GetPacksHandler(ctx *gin.Context) {
 
 func GetGitCommitHashHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
-		"hash": gitCommitHash,
+		"hash": versioninfo.Revision,
+		"date": versioninfo.LastCommit,
 	})
 }

@@ -9,6 +9,12 @@ require (
 )
 
 require (
+	github.com/jellydator/ttlcache/v3 v3.1.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
+)
+
+require (
+	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect

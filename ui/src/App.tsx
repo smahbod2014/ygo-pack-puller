@@ -52,6 +52,7 @@ function App() {
   const [nextPackLoading, setNextPackLoading] = useState(false);
   const [showingSummary, setShowingSummary] = useState(false);
   const [gitCommitHash, setGitCommitHash] = useState("");
+  const [gitCommitDate, setGitCommitDate] = useState("");
 
   useEffect(() => {
     fetch("/api/packs")
@@ -70,7 +71,9 @@ function App() {
       .then((result) => result.json())
       .then((json) => {
         const hash = json.hash as string;
+        const commitDate = json.date as string;
         setGitCommitHash(hash.slice(0, 8));
+        setGitCommitDate(commitDate);
       });
   }, []);
 
@@ -302,7 +305,10 @@ function App() {
             </div>
           </>
         )}
-        <div className="VersionText">{gitCommitHash}</div>
+        <div className="VersionText">
+          <div>{gitCommitHash}</div>
+          <div>{gitCommitDate}</div>
+        </div>
       </header>
     </div>
   );
