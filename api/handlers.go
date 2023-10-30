@@ -246,6 +246,11 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 		var fixedReadCards []MDMCard
 		for _, card := range readCards {
 			if card.KonamiID == 0 {
+				if card.Name == "GranSolfacord Coolia" {
+					// masterduelmeta has a typo in the name...
+					card.Name = "GranSolfachord Coolia"
+				}
+
 				// Get the konami ID from ygoprodeck since masterduelmeta doesn't have it
 				ygoprodeckResponse, err := http.Get("https://db.ygoprodeck.com/api/v7/cardinfo.php?name=" + card.Name)
 				if err != nil {

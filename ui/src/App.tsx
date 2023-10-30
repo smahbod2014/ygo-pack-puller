@@ -50,6 +50,7 @@ function App() {
   const [numPacksToPull, setNumPacksToPull] = useState(10);
   const [numPacksInCurrentPull, setNumPacksInCurrentPull] = useState(10);
   const [nextPackLoading, setNextPackLoading] = useState(false);
+  const [packLoadError, setPackLoadError] = useState(false);
   const [showingSummary, setShowingSummary] = useState(false);
   const [gitCommitHash, setGitCommitHash] = useState("");
   const [gitCommitDate, setGitCommitDate] = useState("");
@@ -79,6 +80,7 @@ function App() {
 
   const postPullPacks = async () => {
     setNextPackLoading(true);
+    setPackLoadError(false);
 
     const jsonResponse: PerformPullsResponse = await fetch("/api/pull", {
       method: "POST",
@@ -87,13 +89,21 @@ function App() {
         num_packs: numPacksToPull,
       }),
       headers: { "Content-Type": "application/json" },
-    }).then((result) => result.json());
+    }).then((response) => {
+      if (response.status !== 200) {
+        setPackLoadError(true);
+      } else {
+        setCurrentPackNumber(0);
+        setRevealedCards(new Array<boolean>(8));
+        setNextPackLoading(false);
+        setNumPacksInCurrentPull(numPacksToPull);
+        return response.json();
+      }
+    });
 
-    setPerformPullsResponse(jsonResponse);
-    setCurrentPackNumber(0);
-    setRevealedCards(new Array<boolean>(8));
-    setNextPackLoading(false);
-    setNumPacksInCurrentPull(numPacksToPull);
+    if (jsonResponse) {
+      setPerformPullsResponse(jsonResponse);
+    }
   };
 
   const updateRevealedCards = (i: number, flipped: boolean) => {
@@ -156,7 +166,7 @@ function App() {
                 <div className="SummaryRow" key={i}>
                   {sortedCards.slice(i * 8, i * 8 + 8).map((card, j) => {
                     return (
-                      <div className="SummaryCard">
+                      <div className="SummaryCard" key={j}>
                         <img className="CardRarity" src={rarityImages[card.card_rarity]} draggable={false} />
                         <a href={"https://ygoprodeck.com/card?search=" + card.card_id} target="_blank" draggable={false}>
                           <div className={card.card_foil} style={{ position: "relative" }}>
@@ -209,7 +219,9 @@ function App() {
           </div>
         </div>
 
-        {nextPackLoading && !performPullsResponse && <p className="Loading">Loading...</p>}
+        {nextPackLoading &&
+          !performPullsResponse &&
+          (packLoadError ? <p className="Loading">Something went wrong. Try another pack.</p> : <p className="Loading">Loading...</p>)}
 
         {performPullsResponse && performPullsResponse.pulls.length > 0 && (
           <>
