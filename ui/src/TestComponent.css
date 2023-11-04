@@ -1,0 +1,32 @@
+.TestComponentOuter {
+  background-color: #282c34;
+  color: white;
+  height: 100vh;
+}
+
+.TestComponentInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 50%;
+}
+
+.RoomContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  width: 25%;
+  height: 15%;
+}
+
+.spacer {
+  flex-grow: 1;
+}
+
+.RoomButton {
+  font-size: 16px;
+}
+
+.RoomTextInput {
+  height: 100%;
+}
