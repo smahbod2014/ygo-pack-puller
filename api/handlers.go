@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -222,7 +223,9 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 	apiURL := "https://www.masterduelmeta.com/api/v1/cards?obtain.source=%s&cardSort=monsterTypeOrder&aggregate=search&fields=name,rarity,konamiID&page=%d&limit=1000"
 	page := 1
 	for {
-		response, err := http.Get(fmt.Sprintf(apiURL, url.QueryEscape(packID), page))
+		fullURL := fmt.Sprintf(apiURL, url.QueryEscape(packID), page)
+		log.Printf("Making API call: GET to %s", fullURL)
+		response, err := http.Get(fullURL)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch cards from cards API")
 		}
@@ -235,7 +238,7 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 		var readCards []MDMCard
 		err = json.Unmarshal(bytes, &readCards)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal cards")
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to unmarshal cards from response body: %s", string(bytes)))
 		}
 
 		if len(readCards) == 0 {
