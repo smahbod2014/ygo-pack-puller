@@ -255,7 +255,7 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 				}
 
 				// Get the konami ID from ygoprodeck since masterduelmeta doesn't have it
-				ygoprodeckResponse, err := http.Get("https://db.ygoprodeck.com/api/v7/cardinfo.php?name=" + card.Name)
+				ygoprodeckResponse, err := http.Get("https://db.ygoprodeck.com/api/v7/cardinfo.php?name=" + url.QueryEscape(card.Name))
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to get fixed card from ygoprodeck")
 				}
@@ -269,7 +269,7 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 				var unmarshalledResponse YGOProDeckResponse
 				err = json.Unmarshal(ygoprodeckBytes, &unmarshalledResponse)
 				if err != nil {
-					return nil, errors.Wrap(err, "failed to unmarshal ygoprodeck response")
+					return nil, errors.Wrap(err, fmt.Sprintf("failed to unmarshal ygoprodeck response for %s: %s", card.Name, string(ygoprodeckBytes)))
 				}
 
 				card.KonamiID = FlexInt(unmarshalledResponse.Data[0].ID)
