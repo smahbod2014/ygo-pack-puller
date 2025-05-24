@@ -281,7 +281,19 @@ func fetchAllCardsFromPack(packID string) ([]MDMCard, error) {
 		page++
 	}
 
-	return cards, nil
+	seenCards := map[string]MDMCard{}
+	for _, card := range cards {
+		if _, ok := seenCards[card.Name]; !ok {
+			seenCards[card.Name] = card
+		}
+	}
+
+	var cardsToReturn []MDMCard
+	for _, v := range seenCards {
+		cardsToReturn = append(cardsToReturn, v)
+	}
+
+	return cardsToReturn, nil
 }
 
 func getPacks() ([]MDMPack, error) {
