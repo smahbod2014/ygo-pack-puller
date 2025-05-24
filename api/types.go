@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 )
 
 type Rarity string
@@ -68,7 +69,7 @@ func (flexInt *FlexInt) UnmarshalJSON(b []byte) error {
 	if s == "" {
 		s = "0"
 	}
-	i, err := strconv.Atoi(s)
+	i, err := strconv.Atoi(strings.TrimSpace(s))
 	if err != nil {
 		return err
 	}
